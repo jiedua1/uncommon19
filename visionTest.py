@@ -12,23 +12,29 @@ import datetime
 def screenGrab():
     box = ()
     time.sleep(1)
-    #im = ImageGrab.grab()
-    im = Image.open(os.getcwd() + '\\full_screenshot.png', mode = 'r')
+    im = ImageGrab.grab()
+    #im = Image.open(os.getcwd() + '\\full_screenshot.png', mode = 'r')
     #oldTime = datetime.datetime.now()
-    for i in range(1):
+    for i in range(5):
+        im = Image.open(os.getcwd() + '\\full_screenshot%d.png' % (i+1), mode = 'r')
         image = cv2.cvtColor(np.array(im), cv2.COLOR_RGB2BGR)
         height = image.shape[0]
         width = image.shape[1]
 
         grayimg = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
-        image_name = os.getcwd() + '\\snap__' + str(int(time.time())) + '.png'
+        time_based_naming = False #use time based image tagging
+        if time_based_naming:
+            output_image_name = os.getcwd() + '\\snap__' + str(int(time.time())) + '.png'
+        else:
+            output_image_name = os.getcwd() + '\\screen_processed' + str((i+1)) + '.png'
+
         """
         plt.ion()
         im.show()
         """
 
         #process the image using thresholding, 85 color value works well for nibbles
-        ret, thres_img = cv2.threshold(grayimg, 65, 255, cv2.THRESH_BINARY)
+        ret, thres_img = cv2.threshold(grayimg, 80, 255, cv2.THRESH_BINARY)
         #gaussian thresholding doesn't work well because it has the hexagons
         #thres_img = cv2.adaptiveThreshold(grayimg, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
         
@@ -67,10 +73,10 @@ def screenGrab():
             print(marker.pt)
             im_with_keypoints = cv2.drawMarker(im_with_keypoints, tuple(int(i) for i in marker.pt), color=128, markerType = cv2.MARKER_CROSS, markerSize = height//30, thickness = 5)
 
-        cv2.imshow("Keypoints", im_with_keypoints)
-        cv2.waitKey(0)
+        #cv2.imshow("Keypoints", im_with_keypoints)
+        #cv2.waitKey(0)
 
-        cv2.imwrite(image_name, thres_img)
+        cv2.imwrite(output_image_name, im_with_keypoints)
     #print(datetime.datetime.now() - oldTime)
 
 def main():
