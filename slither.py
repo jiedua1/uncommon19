@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from PIL import Image
 import pyautogui
 import time
 import webbrowser
@@ -11,6 +12,9 @@ VALID_DIST = min(WIDTH / 4, HEIGHT / 4)
 CENTER = np.array([WIDTH / 2, HEIGHT / 2])
 URL = 'http://slither.io'
 
+
+def load_image(file):
+    return np.array(Image.open(file))
 
 
 def open_game(url):
@@ -28,7 +32,12 @@ def move_mouse(displacement):
 
 
 def grab_screen(threshold):
-    image = np.dot(np.array(pyautogui.screenshot()), GREYSCALE_VECTOR)
+    image = np.array(pyautogui.screenshot())
+    return image
+
+
+def process_image(image):
+    image = np.dot(image, GREYSCALE_VECTOR)
     image = 255 * (image > threshold)
     image[int(0.85*HEIGHT): , int(0.9*WIDTH):] = 0
     image[int(0.93*HEIGHT):, :int(0.1*WIDTH)] = 0
@@ -43,9 +52,11 @@ def save_image(image, name):
 
 
 if __name__=="__main__":
-    open_game(URL)
-    displacement = np.random.choice([-VALID_DIST, 0, VALID_DIST], 2)
-    move_mouse(displacement)
-    time.sleep(5)
-    image = grab_screen(60)
+    # open_game(URL)
+    # displacement = np.random.choice([-VALID_DIST, 0, VALID_DIST], 2)
+    # move_mouse(displacement)
+    # time.sleep(5)
+    # image = grab_screen(60)
+    # save_image(image, 1)
+    image = process_image(load_image('2.png'))
     save_image(image, 1)
