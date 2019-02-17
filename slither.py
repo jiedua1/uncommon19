@@ -24,7 +24,7 @@ def load_image(file):
 
 def open_game(url):
     webbrowser.open(url)
-    time.sleep(2)
+    time.sleep(5)
     pyautogui.press('f11')
     time.sleep(1)
     pyautogui.press('enter')
@@ -73,17 +73,30 @@ def draw_marker(image, position):
 
 def run_slither_bot(threshold, iterations):
     open_game(URL)
+    delta_time = 0 #time it took for last iteration
     for i in range(iterations):
         image = process_image(grab_screen(), threshold)
         oldTime = datetime.datetime.now()
         positions, sizes = detect_blobs(image)
+        old_mouse_position = None
+
         if positions:
             best_position = get_best_position(positions, sizes)
+            
+            #adjust for lag... about 4 seconds to go across width of screen
+            velocity = WIDTH / 8
+            #how much the snake has moved in the meantime
+            if old_mouse_position != None:
+                snake_delta = (old_mouse_position - CENTER) / np.linalg.norm(old_mouse_position - CENTER) * velocity
+            else:
+                snake_delta = np.array([0,0])
+            best_position -= snake_delta #account for the snake movement
             move_mouse(best_position)
             image = draw_marker(image, best_position)
-            save_image(image, "{}.png".format(i))
-            print(datetime.datetime.now() - oldTime)
-
+            #save_image(image, "{}.png".format(i))
+            delta_time = (datetime.datetime.now() - oldTime).total_seconds()
+            print(delta_time)
+            old_mouse_position = best_position
 
 if __name__=="__main__":
-    run_slither_bot(65, 100)
+    run_slither_bot(65, 80)
