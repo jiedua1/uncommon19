@@ -27,8 +27,12 @@ def move_mouse(displacement):
     pyautogui.click(*position)
 
 
-def grab_screen():
+def grab_screen(threshold):
     image = np.dot(np.array(pyautogui.screenshot()), GREYSCALE_VECTOR)
+    image = 255 * (image > threshold)
+    image[int(0.85*HEIGHT): , int(0.9*WIDTH):] = 0
+    image[int(0.93*HEIGHT):, :int(0.1*WIDTH)] = 0
+    image[:int(0.34*HEIGHT), int(0.8*WIDTH):] = 0
     return image
 
 
@@ -43,5 +47,5 @@ if __name__=="__main__":
     displacement = np.random.choice([-VALID_DIST, 0, VALID_DIST], 2)
     move_mouse(displacement)
     time.sleep(5)
-    image = grab_screen()
-    break
+    image = grab_screen(60)
+    save_image(image, 1)
