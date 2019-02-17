@@ -48,10 +48,7 @@ def process_image(image, threshold):
 
 
 def save_image(image, name):
-    plt.gray()
-    plt.imshow(image)
-    plt.savefig("{}.png".format(name))
-
+    cv2.imwrite(name, image)
 
 def detect_blobs(image):
     is_v2 = cv2.__version__.startswith("2.")
@@ -76,5 +73,7 @@ if __name__=="__main__":
     # save_image(image, 1)
     image = process_image(load_image('full_screenshot.png'), 65)
     positions, sizes = detect_blobs(image)
+    screen = grab_screen()
+    save_image(process_image(load_image("full_screenshot.png"), 85), "screenshot.png")
     move = get_best_move(positions, sizes)
     # save_image(image, 1)
