@@ -15,9 +15,10 @@ URL = 'http://slither.io'
 
 
 def load_image(file):
-    global WIDTH, HEIGHT
+    global WIDTH, HEIGHT, CENTER
     image = cv2.cvtColor(np.array(Image.open(file)), cv2.COLOR_RGB2BGR)
     HEIGHT, WIDTH = image.shape[:2]
+    CENTER = np.array([WIDTH / 2, HEIGHT / 2])
     return image
 
 
@@ -51,6 +52,7 @@ def process_image(image, threshold):
 def save_image(image, name):
     cv2.imwrite(name, image)
 
+
 def detect_blobs(image):
     is_v2 = cv2.__version__.startswith("2.")
     detector = cv2.SimpleBlobDetector() if is_v2 else cv2.SimpleBlobDetector_create()
@@ -60,21 +62,24 @@ def detect_blobs(image):
     return positions, sizes
 
 
-def get_best_move(positions, sizes):
-    move = min(positions, key=lambda position: np.linalg.norm(position - CENTER))
-    return move
+def get_best_position(positions, sizes):
+    position = min(positions, key=lambda position: np.linalg.norm(position - CENTER))
+    return position
+
+
+def run_slither_bot(threshold, iterations):
+    open_game(URL)
+    for i in range(iterations):
+        image = process_image(grab_screen(), threshold)
+        oldTime = datetime.datetime.now()
+        positions, sizes = detect_blobs(image)
+        if positions:
+            best_position = get_best_position(positions, sizes)
+            move_mouse(best_position)
+        else:
+            pass
+        print(datetime.datetime.now() - oldTime)
 
 
 if __name__=="__main__":
-    # open_game(URL)
-    # displacement = np.random.choice([-VALID_DIST, 0, VALID_DIST], 2)
-    # move_mouse(displacement)
-    # time.sleep(5)
-    # image = grab_screen(60)
-    # save_image(image, 1)
-    image = process_image(load_image('full_screenshot.png'), 65)
-    positions, sizes = detect_blobs(image)
-    screen = grab_screen()
-    save_image(process_image(load_image("full_screenshot.png"), 85), "screenshot.png")
-    move = get_best_move(positions, sizes)
-    # save_image(image, 1)
+    run_slither_bot(65, 100)
