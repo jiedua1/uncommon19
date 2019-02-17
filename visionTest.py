@@ -28,7 +28,7 @@ def screenGrab():
         """
 
         #process the image using thresholding, 85 color value works well for nibbles
-        ret, thres_img = cv2.threshold(grayimg, 60, 255, cv2.THRESH_BINARY)
+        ret, thres_img = cv2.threshold(grayimg, 65, 255, cv2.THRESH_BINARY)
         #gaussian thresholding doesn't work well because it has the hexagons
         #thres_img = cv2.adaptiveThreshold(grayimg, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
         
@@ -47,8 +47,10 @@ def screenGrab():
         params.maxThreshold = 255
         params.filterByArea = False
         """
+
         #invert image
-        #thres_img = cv2.bitwise_not(thres_img)
+        thres_img = cv2.bitwise_not(thres_img)
+
         #syntax depends on opencv version...
         is_v2 = cv2.__version__.startswith("2.")
         if is_v2:
@@ -59,11 +61,12 @@ def screenGrab():
         keypoints = detector.detect(thres_img)
         #im_with_keypoints = cv2.drawKeypoints(thres_img, keypoints, np.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
         #drawKeypoints is broken in opencv 4.0
-
         im_with_keypoints = thres_img.copy()
+
         for marker in keypoints:
-	        im_with_keypoints = cv2.drawMarker(im_with_keypoints, tuple(int(i) for i in marker.pt), color=(0, 255, 0))
-        
+            print(marker.pt)
+            im_with_keypoints = cv2.drawMarker(im_with_keypoints, tuple(int(i) for i in marker.pt), color=128, markerType = cv2.MARKER_CROSS, markerSize = height//30, thickness = 5)
+
         cv2.imshow("Keypoints", im_with_keypoints)
         cv2.waitKey(0)
 
