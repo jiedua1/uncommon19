@@ -29,13 +29,12 @@ def open_game(url):
     pyautogui.click(play)
 
 
-def move_mouse(displacement):
-    position = CENTER + displacement
+def move_mouse(position):
     pyautogui.click(*position)
 
 
 def grab_screen():
-    image = np.array(pyautogui.screenshot())
+    image = cv2.cvtColor(np.array(pyautogui.screenshot()), cv2.COLOR_RGB2BGR)
     return image
 
 
@@ -58,13 +57,14 @@ def detect_blobs(image):
     is_v2 = cv2.__version__.startswith("2.")
     detector = cv2.SimpleBlobDetector() if is_v2 else cv2.SimpleBlobDetector_create()
     keypoints = detector.detect(image)
-    im_with_keypoints = image.copy()
+    positions = [np.array([marker.pt[0], marker.pt[1]]) for marker in keypoints]
+    sizes = [marker.size for marker in keypoints]
+    return positions, sizes
 
-    for marker in keypoints:
-        print(marker.pt)
-        im_with_keypoints = cv2.drawMarker(im_with_keypoints, tuple(int(i) for i in marker.pt), color=128, markerType = cv2.MARKER_CROSS, markerSize = HEIGHT//30, thickness = 5)
 
-    return im_with_keypoints
+def get_best_move(positions, sizes):
+    move = min(positions, key=lambda position: np.linalg.norm(position - CENTER))
+    return move
 
 
 if __name__=="__main__":
@@ -75,6 +75,6 @@ if __name__=="__main__":
     # image = grab_screen(60)
     # save_image(image, 1)
     image = process_image(load_image('full_screenshot.png'), 65)
-    im_with_keypoints = detect_blobs(image)
-    save_image(im_with_keypoints, 1)
+    positions, sizes = detect_blobs(image)
+    move = get_best_move(positions, sizes)
     # save_image(image, 1)
