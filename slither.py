@@ -7,7 +7,6 @@ import time
 import webbrowser
 
 
-GREYSCALE_VECTOR = [0.299, 0.587, 0.114]
 WIDTH, HEIGHT = pyautogui.size()
 VALID_DIST = min(WIDTH / 4, HEIGHT / 4)
 CENTER = np.array([WIDTH / 2, HEIGHT / 2])
