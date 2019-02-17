@@ -26,9 +26,8 @@ def open_game(url):
     webbrowser.open(url)
     time.sleep(2)
     pyautogui.press('f11')
-    time.sleep(5)
-    play = pyautogui.locateCenterOnScreen('play.png')
-    pyautogui.click(play)
+    time.sleep(1)
+    pyautogui.press('enter')
 
 
 def move_mouse(position):
@@ -67,6 +66,11 @@ def get_best_position(positions, sizes):
     return position
 
 
+def draw_marker(image, position):
+    return cv2.drawMarker(image, (int(position[0]), int(position[1])),
+        color = 128, markerType = cv2.MARKER_CROSS, markerSize = HEIGHT // 30, thickness = 5)
+
+
 def run_slither_bot(threshold, iterations):
     open_game(URL)
     for i in range(iterations):
@@ -76,9 +80,9 @@ def run_slither_bot(threshold, iterations):
         if positions:
             best_position = get_best_position(positions, sizes)
             move_mouse(best_position)
-        else:
-            pass
-        print(datetime.datetime.now() - oldTime)
+            image = draw_marker(image, best_position)
+            save_image(image, "{}.png".format(i))
+            print(datetime.datetime.now() - oldTime)
 
 
 if __name__=="__main__":
