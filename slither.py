@@ -6,6 +6,7 @@ from PIL import Image
 import pyautogui
 import time
 import webbrowser
+import snake_detection
 
 
 WIDTH, HEIGHT = pyautogui.size()
@@ -41,7 +42,7 @@ def grab_screen():
 
 def process_image(image, threshold):
     image = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
-    ret, threshold_image = cv2.threshold(image, 65, 255, cv2.THRESH_BINARY)
+    ret, threshold_image = cv2.threshold(image, threshold, 255, cv2.THRESH_BINARY)
     threshold_image[int(0.85*HEIGHT): , int(0.9*WIDTH):] = 0
     threshold_image[int(0.93*HEIGHT):, :int(0.1*WIDTH)] = 0
     threshold_image[:int(0.34*HEIGHT), int(0.8*WIDTH):] = 0
@@ -51,7 +52,7 @@ def process_image(image, threshold):
 def save_image(image, name):
     cv2.imwrite(name, image)
 
-
+#Return: float array positions, int array size
 def detect_blobs(image):
     is_v2 = cv2.__version__.startswith("2.")
     detector = cv2.SimpleBlobDetector() if is_v2 else cv2.SimpleBlobDetector_create()
@@ -70,7 +71,6 @@ def draw_marker(image, position):
     return cv2.drawMarker(image, (int(position[0]), int(position[1])),
         color = 128, markerType = cv2.MARKER_CROSS, markerSize = HEIGHT // 30, thickness = 5)
 
-
 def run_slither_bot(threshold, iterations):
     open_game(URL)
     delta_time = 0 #time it took for last iteration
@@ -82,21 +82,48 @@ def run_slither_bot(threshold, iterations):
 
         if positions:
             best_position = get_best_position(positions, sizes)
-            
+
+            #limit angular velocity
+            new_vector = best_position - CENTER
+            last_vector = old_mouse_position - CENTER
+
             #adjust for lag... about 4 seconds to go across width of screen
             velocity = WIDTH / 8
             #how much the snake has moved in the meantime
-            if old_mouse_position != None:
-                snake_delta = (old_mouse_position - CENTER) / np.linalg.norm(old_mouse_position - CENTER) * velocity
-            else:
-                snake_delta = np.array([0,0])
+            snake_delta = np.array([0,0])
             best_position -= snake_delta #account for the snake movement
+
+            
+            #AVOID SNAKES IF WE SEE ONE:
+            num_labels, labels, stats, centroids = snake_detection.find_snakes(image, positions)
+            valid_snake_ids = []
+            for i in range(1, num_labels):
+                if stats[i][4] > WIDTH * WIDTH / 1000: #~10000 pixels, big snek
+                    valid_snake_ids.append(i)
+
+            not_too_close_ids = []
+            not_too_close_values = [] #closest snakes that are not too close to our snake (to avoid the own snake)
+            for i in range(len(valid_snake_ids)):
+                position = centroids[valid_snake_ids[i]]
+                if np.linalg.norm(position - CENTER) > WIDTH/8:
+                    not_too_close_ids.append(valid_snake_ids[i])
+                    not_too_close_values.append(position)
+
+            if len(not_too_close_ids) > 0:
+                not_too_close_distances = [np.linalg.norm(vec) for vec in not_too_close_values]
+                closest_snake_pos = not_too_close_values[np.argmin(not_too_close_distances)]
+                curVec = best_position - CENTER #current direction vector
+                dirToSnake = closest_snake_pos - CENTER
+                if np.dot(curVec, dirToSnake) < 0:
+                    best_position = CENTER-dirToSnake
+
             move_mouse(best_position)
             image = draw_marker(image, best_position)
             #save_image(image, "{}.png".format(i))
             delta_time = (datetime.datetime.now() - oldTime).total_seconds()
             print(delta_time)
             old_mouse_position = best_position
+        
 
 if __name__=="__main__":
     run_slither_bot(65, 80)
