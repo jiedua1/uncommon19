@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 import pyautogui
+from sklearn.cluster import KMeans
 import time
 import webbrowser
 
@@ -16,7 +17,7 @@ URL = 'http://slither.io'
 
 def load_image(file):
     global WIDTH, HEIGHT, CENTER
-    image = cv2.cvtColor(np.array(Image.open(file)), cv2.COLOR_RGB2BGR)
+    image = cv2.cvtColor(np.array(Image.open(file)), cv2.COLOR_RGB2GRAY)
     HEIGHT, WIDTH = image.shape[:2]
     CENTER = np.array([WIDTH / 2, HEIGHT / 2])
     return image
@@ -35,12 +36,10 @@ def move_mouse(position):
 
 
 def grab_screen():
-    image = cv2.cvtColor(np.array(pyautogui.screenshot()), cv2.COLOR_RGB2BGR)
-    return image
+    return cv2.cvtColor(np.array(pyautogui.screenshot()), cv2.COLOR_RGB2GRAY)
 
 
 def process_image(image, threshold):
-    image = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
     ret, threshold_image = cv2.threshold(image, 65, 255, cv2.THRESH_BINARY)
     threshold_image[int(0.85*HEIGHT): , int(0.9*WIDTH):] = 0
     threshold_image[int(0.93*HEIGHT):, :int(0.1*WIDTH)] = 0
@@ -56,14 +55,33 @@ def detect_blobs(image):
     is_v2 = cv2.__version__.startswith("2.")
     detector = cv2.SimpleBlobDetector() if is_v2 else cv2.SimpleBlobDetector_create()
     keypoints = detector.detect(image)
-    positions = [np.array([marker.pt[0], marker.pt[1]]) for marker in keypoints]
+    positions = [[marker.pt[0], marker.pt[1]] for marker in keypoints]
     sizes = [marker.size for marker in keypoints]
     return positions, sizes
 
 
-def get_best_position(positions, sizes):
-    position = min(positions, key=lambda position: np.linalg.norm(position - CENTER))
-    return position
+def normalize(position):
+    difference_vector = position - CENTER
+    norm = np.linalg.norm(difference_vector)
+    return difference_vector / norm, norm
+
+
+def get_best_position(positions, sizes, previous_position):
+    num_positions = len(positions)
+    kmeans = KMeans(n_clusters=int(np.sqrt(num_positions))) \
+        .fit(positions, [sizes[i] / np.linalg.norm(positions[i]) for i in range(num_positions)])
+    centers = kmeans.cluster_centers_
+    index = kmeans.predict([CENTER])[0]
+    return centers[index]
+    # previous_position_norm = np.linalg.norm(previous_position)
+    # new_position = np.array([0.0, 0.0])
+    # for position in positions:
+    #     normalized_vector, norm = normalize(position)
+    #     angle_closeness_measure = np.dot(previous_position, normalized_vector) + 4 * previous_position_norm
+    #     new_position += normalized_vector * angle_closeness_measure # / norm
+    #
+    # normalized_new_vector = 200 * new_position / np.linalg.norm(new_position)
+    # return CENTER + normalized_new_vector
 
 
 def draw_marker(image, position):
@@ -73,30 +91,17 @@ def draw_marker(image, position):
 
 def run_slither_bot(threshold, iterations):
     open_game(URL)
-    delta_time = 0 #time it took for last iteration
+    best_position = CENTER + np.array([0,200])
     for i in range(iterations):
+        # time1 = datetime.datetime.now()
         image = process_image(grab_screen(), threshold)
-        oldTime = datetime.datetime.now()
         positions, sizes = detect_blobs(image)
-        old_mouse_position = None
 
         if positions:
-            best_position = get_best_position(positions, sizes)
-            
-            #adjust for lag... about 4 seconds to go across width of screen
-            velocity = WIDTH / 8
-            #how much the snake has moved in the meantime
-            if old_mouse_position != None:
-                snake_delta = (old_mouse_position - CENTER) / np.linalg.norm(old_mouse_position - CENTER) * velocity
-            else:
-                snake_delta = np.array([0,0])
-            best_position -= snake_delta #account for the snake movement
+            best_position = get_best_position(positions, sizes, best_position)
             move_mouse(best_position)
             image = draw_marker(image, best_position)
-            #save_image(image, "{}.png".format(i))
-            delta_time = (datetime.datetime.now() - oldTime).total_seconds()
-            print(delta_time)
-            old_mouse_position = best_position
+            save_image(image, "{}.png".format(i))
 
 if __name__=="__main__":
     run_slither_bot(65, 80)
